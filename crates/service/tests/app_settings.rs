@@ -1282,7 +1282,7 @@ fn sync_runtime_settings_from_storage_applies_saved_runtime_values() {
 }
 
 #[test]
-fn sync_runtime_settings_from_storage_migrates_legacy_ordered_route_strategy() {
+fn sync_runtime_settings_from_storage_preserves_ordered_route_strategy() {
     with_temp_db(|db_path| {
         let storage = Storage::open(db_path).expect("open storage");
         storage
@@ -1291,7 +1291,7 @@ fn sync_runtime_settings_from_storage_migrates_legacy_ordered_route_strategy() {
                 "ordered",
                 now_ts(),
             )
-            .expect("save legacy ordered route strategy");
+            .expect("save ordered route strategy");
         drop(storage);
 
         let _env = override_env_vars(&[("CODEXMANAGER_ROUTE_STRATEGY", None)]);
@@ -1303,21 +1303,21 @@ fn sync_runtime_settings_from_storage_migrates_legacy_ordered_route_strategy() {
             snapshot
                 .get("routeStrategy")
                 .and_then(|value| value.as_str()),
-            Some("balanced")
+            Some("ordered")
         );
 
         let storage = Storage::open(db_path).expect("reopen storage");
         assert_eq!(
             storage
                 .get_app_setting(codexmanager_service::APP_SETTING_GATEWAY_ROUTE_STRATEGY_KEY)
-                .expect("read migrated route strategy"),
-            Some("balanced".to_string())
+                .expect("read ordered route strategy"),
+            Some("ordered".to_string())
         );
     });
 }
 
 #[test]
-fn app_settings_set_maps_ordered_route_strategy_to_balanced() {
+fn app_settings_set_preserves_ordered_route_strategy() {
     with_temp_db(|db_path| {
         let snapshot = codexmanager_service::app_settings_set(Some(&json!({
             "routeStrategy": "ordered"
@@ -1328,7 +1328,7 @@ fn app_settings_set_maps_ordered_route_strategy_to_balanced() {
             snapshot
                 .get("routeStrategy")
                 .and_then(|value| value.as_str()),
-            Some("balanced")
+            Some("ordered")
         );
 
         let storage = Storage::open(db_path).expect("reopen storage");
@@ -1336,7 +1336,7 @@ fn app_settings_set_maps_ordered_route_strategy_to_balanced() {
             storage
                 .get_app_setting(codexmanager_service::APP_SETTING_GATEWAY_ROUTE_STRATEGY_KEY)
                 .expect("read stored route strategy"),
-            Some("balanced".to_string())
+            Some("ordered".to_string())
         );
     });
 }
