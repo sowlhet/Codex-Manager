@@ -43,11 +43,7 @@ pub(in super::super) fn acquire_request_gate(
                     }
                     _ => Ok(None),
                 },
-                None => match deadline::remaining(request_deadline) {
-                    Some(remaining) if remaining.is_zero() => Ok(None),
-                    Some(remaining) => request_gate_lock.acquire_with_timeout(remaining),
-                    None => request_gate_lock.acquire().map(Some),
-                },
+                None => Ok(None),
             };
             if let Ok(Some(guard)) = wait_result {
                 super::super::super::trace_log::log_request_gate_acquired(
@@ -103,6 +99,45 @@ mod tests {
             None => std::env::remove_var(ENV_REQUEST_GATE_WAIT_TIMEOUT_MS),
         }
         crate::gateway::reload_runtime_config_from_env();
+    }
+
+    #[test]
+    fn acquire_request_gate_does_not_wait_by_default_when_busy() {
+        let _guard = crate::test_env_guard();
+        let previous = std::env::var(ENV_REQUEST_GATE_WAIT_TIMEOUT_MS).ok();
+        std::env::remove_var(ENV_REQUEST_GATE_WAIT_TIMEOUT_MS);
+        crate::gateway::reload_runtime_config_from_env();
+
+        let first_guard = acquire_request_gate(
+            "trc_gate_default_first",
+            "gk_gate_default",
+            "/v1/responses",
+            Some("gpt-5.5"),
+            Some(Instant::now() + Duration::from_secs(5)),
+        )
+        .expect("first request should acquire the gate immediately");
+
+        let started_at = Instant::now();
+        let second_guard = acquire_request_gate(
+            "trc_gate_default_second",
+            "gk_gate_default",
+            "/v1/responses",
+            Some("gpt-5.5"),
+            Some(Instant::now() + Duration::from_secs(5)),
+        );
+        let waited = started_at.elapsed();
+
+        drop(first_guard);
+        restore_request_gate_wait_timeout(previous);
+
+        assert!(
+            second_guard.is_none(),
+            "busy gate should let the request proceed without a guard"
+        );
+        assert!(
+            waited < Duration::from_millis(20),
+            "default gate behavior should not wait: {waited:?}"
+        );
     }
 
     #[test]

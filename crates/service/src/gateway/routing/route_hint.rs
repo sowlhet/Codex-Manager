@@ -25,7 +25,7 @@ const DEFAULT_ROUTE_STATE_TTL_SECS: u64 = 0;
 const DEFAULT_ROUTE_STATE_CAPACITY: usize = 0;
 const ROUTE_STATE_MAINTENANCE_EVERY: u64 = 64;
 
-static ROUTE_MODE: AtomicU8 = AtomicU8::new(ROUTE_MODE_ORDERED);
+static ROUTE_MODE: AtomicU8 = AtomicU8::new(ROUTE_MODE_BALANCED_ROUND_ROBIN);
 static ROUTE_HEALTH_P2C_ENABLED: AtomicBool = AtomicBool::new(DEFAULT_ROUTE_HEALTH_P2C_ENABLED);
 static ROUTE_HEALTH_P2C_ORDERED_WINDOW: AtomicUsize =
     AtomicUsize::new(DEFAULT_ROUTE_HEALTH_P2C_ORDERED_WINDOW);
@@ -709,7 +709,7 @@ fn key_model_key(key_id: &str, model: Option<&str>) -> String {
 /// 无
 pub(super) fn reload_from_env() {
     let raw = std::env::var(ROUTE_STRATEGY_ENV).unwrap_or_default();
-    let mode = parse_route_mode(raw.as_str()).unwrap_or(ROUTE_MODE_ORDERED);
+    let mode = parse_route_mode(raw.as_str()).unwrap_or(ROUTE_MODE_BALANCED_ROUND_ROBIN);
     ROUTE_MODE.store(mode, Ordering::Relaxed);
     ROUTE_HEALTH_P2C_ENABLED.store(
         env_bool_or(

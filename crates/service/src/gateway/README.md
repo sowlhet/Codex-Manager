@@ -130,7 +130,7 @@
 注意：
 
 - 后端会把以上轮询别名统一归一化为 `balanced`
-- 如果未配置 `CODEXMANAGER_ROUTE_STRATEGY`，默认策略是 `ordered`
+- 如果未配置 `CODEXMANAGER_ROUTE_STRATEGY`，默认策略是 `balanced`
 
 候选池基础顺序：
 
@@ -143,6 +143,7 @@
 - 如果设置了手动指定账号（manual preferred account），会先把该账号旋转到队首
 - 只要该账号仍在可用候选池内，就会覆盖普通 `ordered / balanced` 轮转逻辑
 - 手动优先是显式用户选择，不会因为一次 failover、一次 4xx/5xx，或一次临时过滤就被自动清掉
+- `balanced` 模式下，已有 conversation binding 不再覆盖账号轮询；同一平台密钥、同一模型的并发请求会优先分散到账号池候选
 
 ### Free 账号使用模型
 
@@ -201,7 +202,7 @@
 - 只返回推荐值，不会自动保存
 - 会根据当前机器 CPU / 内存推导 `usageRefreshWorkers`、HTTP / 流式 worker 因子和最低保底、以及单账号并发上限
 - 默认值不会被改写，只有用户点按钮后才会把推荐值填进草稿
-- 入口侧仍然使用短队列等待，队列满后会快速退化，避免进程被拖死
+- 入口侧 request gate 默认不等待；只有显式配置 `CODEXMANAGER_REQUEST_GATE_WAIT_TIMEOUT_MS > 0` 时才会短暂等待
 
 ### `ordered`
 

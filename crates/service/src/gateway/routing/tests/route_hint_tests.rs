@@ -100,7 +100,7 @@ fn account_ids(candidates: &[(Account, Token)]) -> Vec<String> {
         .collect()
 }
 
-/// 函数 `defaults_to_ordered_strategy`
+/// 函数 `defaults_to_balanced_strategy`
 ///
 /// 作者: gaohongshun
 ///
@@ -112,7 +112,7 @@ fn account_ids(candidates: &[(Account, Token)]) -> Vec<String> {
 /// # 返回
 /// 无
 #[test]
-fn defaults_to_ordered_strategy() {
+fn defaults_to_balanced_strategy() {
     let _guard = crate::test_env_guard();
     let previous = std::env::var(ROUTE_STRATEGY_ENV).ok();
     std::env::remove_var(ROUTE_STRATEGY_ENV);
@@ -135,9 +135,9 @@ fn defaults_to_ordered_strategy() {
     assert_eq!(
         account_ids(&second),
         vec![
-            "acc-a".to_string(),
             "acc-b".to_string(),
-            "acc-c".to_string()
+            "acc-c".to_string(),
+            "acc-a".to_string()
         ]
     );
 

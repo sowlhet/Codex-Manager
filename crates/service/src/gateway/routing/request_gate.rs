@@ -85,6 +85,7 @@ impl RequestGateLock {
         }))
     }
 
+    #[cfg(test)]
     pub(crate) fn acquire(self: &Arc<Self>) -> Result<RequestGateGuard, RequestGateAcquireError> {
         let state = match self.state.lock() {
             Ok(guard) => guard,

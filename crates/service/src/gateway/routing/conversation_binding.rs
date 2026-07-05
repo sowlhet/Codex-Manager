@@ -259,6 +259,8 @@ pub(crate) fn prepare_conversation_routing_with_source(
 ) -> Option<ConversationRoutingContext> {
     let conversation_id = normalize_conversation_id(conversation_id)?;
     let existing_binding = existing_binding.cloned();
+    let binding_priority_enabled =
+        source.is_prompt_cache_key() || super::current_route_strategy() != "balanced";
     let bound_account_selectable = existing_binding.as_ref().is_some_and(|binding| {
         candidates
             .iter()
@@ -270,6 +272,8 @@ pub(crate) fn prepare_conversation_routing_with_source(
         existing_binding
             .as_ref()
             .is_some_and(|binding| binding.account_id == account_id)
+    } else if !binding_priority_enabled {
+        false
     } else {
         existing_binding
             .as_ref()
@@ -577,6 +581,9 @@ mod tests {
     /// 无
     #[test]
     fn prepare_conversation_routing_rotates_bound_account_first() {
+        let _guard = crate::test_env_guard();
+        crate::gateway::set_route_strategy("ordered").expect("set ordered");
+
         let mut candidates = vec![
             (sample_account("acc-1", 0), sample_token("acc-1")),
             (sample_account("acc-2", 1), sample_token("acc-2")),
@@ -841,6 +848,9 @@ mod tests {
     /// 无
     #[test]
     fn apply_candidate_rotation_reports_binding_source_when_binding_selected() {
+        let _guard = crate::test_env_guard();
+        crate::gateway::set_route_strategy("ordered").expect("set ordered");
+
         let binding = sample_binding("acc-1");
         let mut routing = prepare_conversation_routing(
             "key-hash-1",
@@ -899,6 +909,65 @@ mod tests {
         assert_eq!(plan.source, CandidateRotationSource::ManualPreferredAccount);
         assert_eq!(plan.strategy_label, "manual_preferred_account");
         assert!(!plan.strategy_applied);
+    }
+
+    #[test]
+    fn balanced_rotation_ignores_existing_conversation_binding_priority() {
+        let _guard = crate::test_env_guard();
+        crate::gateway::set_route_strategy("balanced").expect("set balanced");
+
+        let binding = sample_binding("acc-2");
+        let mut candidates = vec![
+            (sample_account("acc-1", 0), sample_token("acc-1")),
+            (sample_account("acc-2", 1), sample_token("acc-2")),
+            (sample_account("acc-3", 2), sample_token("acc-3")),
+        ];
+        let routing = prepare_conversation_routing(
+            "key-hash-1",
+            Some("conv-1"),
+            Some(&binding),
+            &mut candidates,
+        )
+        .expect("routing context");
+
+        assert!(!routing.binding_selected);
+        assert!(routing.bound_account_selectable);
+        assert_eq!(candidates[0].0.id, "acc-1");
+
+        let first_plan = apply_candidate_rotation(
+            &mut candidates,
+            Some(&routing),
+            "key-hash-1",
+            Some("gpt-5.4"),
+        );
+        assert_eq!(first_plan.source, CandidateRotationSource::RouteStrategy);
+        assert_eq!(first_plan.strategy_label, "balanced");
+        assert!(first_plan.strategy_applied);
+        assert_eq!(candidates[0].0.id, "acc-1");
+
+        let mut second_candidates = vec![
+            (sample_account("acc-1", 0), sample_token("acc-1")),
+            (sample_account("acc-2", 1), sample_token("acc-2")),
+            (sample_account("acc-3", 2), sample_token("acc-3")),
+        ];
+        let second_routing = prepare_conversation_routing(
+            "key-hash-1",
+            Some("conv-1"),
+            Some(&binding),
+            &mut second_candidates,
+        )
+        .expect("routing context");
+        let second_plan = apply_candidate_rotation(
+            &mut second_candidates,
+            Some(&second_routing),
+            "key-hash-1",
+            Some("gpt-5.4"),
+        );
+
+        assert_eq!(second_plan.source, CandidateRotationSource::RouteStrategy);
+        assert_eq!(second_candidates[0].0.id, "acc-2");
+
+        crate::gateway::set_route_strategy("ordered").expect("restore ordered");
     }
 
     /// 函数 `terminal_response_creates_and_rebinds_conversation_binding_on_success`
