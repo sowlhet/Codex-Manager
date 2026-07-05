@@ -781,7 +781,7 @@ export function AccountsPageView(props: AccountsPageViewProps) {
                 <TableHead className="w-[clamp(220px,28vw,340px)] min-w-[220px] max-w-[340px] whitespace-normal">
                   {t("账号信息")}
                 </TableHead>
-                <TableHead className="min-w-[250px] text-center">
+                <TableHead className="min-w-[360px] text-center">
                   {t("额度详情")}
                 </TableHead>
                 <TableHead className="w-[156px]">{t("顺序")}</TableHead>
@@ -865,7 +865,7 @@ export function AccountsPageView(props: AccountsPageViewProps) {
                           isPreferred={account.preferred}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-[360px] align-top">
                         <QuotaOverviewCell items={quotaItems} />
                         <div className="mt-1.5 flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
                           <span

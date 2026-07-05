@@ -254,37 +254,42 @@ export function QuotaOverviewCell({ items }: { items: QuotaSummaryItem[] }) {
               </div>
             ))}
           </div>
-          <div className="mt-1 grid grid-cols-2 gap-3 text-[10px] text-muted-foreground">
-            {summaryItems.map((item) => (
-              <div
-                key={`${item.id}-reset`}
-                className="flex min-w-0 items-center justify-between gap-2"
-              >
-                <span
-                  className={fitLongTextClassName(
-                    formatTsFromSeconds(
-                      item.resetsAt,
-                      item.emptyResetText ?? t("未知"),
-                    ),
-                    "min-w-0 break-words [overflow-wrap:anywhere]",
-                    "text-[10px]",
-                  )}
-                >
-                  {formatTsFromSeconds(
-                    item.resetsAt,
-                    item.emptyResetText ?? t("未知"),
-                  )}
-                </span>
-                <span className="shrink-0 whitespace-nowrap">
-                  {formatRemainingDurationFromSeconds(
-                    item.resetsAt,
-                    item.id.endsWith("-primary") ? "hours" : "days",
-                    item.emptyResetText ?? t("未知"),
-                  )}
-                  {t("后刷新")}
-                </span>
-              </div>
-            ))}
+          <div className="mt-1 grid grid-cols-2 gap-3 text-muted-foreground">
+            {summaryItems.map((item) => {
+              const resetText = formatTsFromSeconds(
+                item.resetsAt,
+                item.emptyResetText ?? t("未知"),
+              );
+              const remainingText = `${formatRemainingDurationFromSeconds(
+                item.resetsAt,
+                item.id.endsWith("-primary") ? "hours" : "days",
+                item.emptyResetText ?? t("未知"),
+              )}${t("后刷新")}`;
+              return (
+                <div key={`${item.id}-reset`} className="min-w-0 space-y-0.5">
+                  <div
+                    className={fitLongTextClassName(
+                      resetText,
+                      "min-w-0 truncate font-mono text-[10px] leading-4",
+                      "text-[9px]",
+                    )}
+                    title={resetText}
+                  >
+                    {resetText}
+                  </div>
+                  <div
+                    className={fitLongTextClassName(
+                      remainingText,
+                      "min-w-0 truncate text-[9px] leading-3 text-muted-foreground/80",
+                      "text-[9px]",
+                    )}
+                    title={remainingText}
+                  >
+                    {remainingText}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </TooltipTrigger>
