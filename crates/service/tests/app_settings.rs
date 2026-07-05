@@ -1282,6 +1282,66 @@ fn sync_runtime_settings_from_storage_applies_saved_runtime_values() {
 }
 
 #[test]
+fn sync_runtime_settings_from_storage_migrates_legacy_ordered_route_strategy() {
+    with_temp_db(|db_path| {
+        let storage = Storage::open(db_path).expect("open storage");
+        storage
+            .set_app_setting(
+                codexmanager_service::APP_SETTING_GATEWAY_ROUTE_STRATEGY_KEY,
+                "ordered",
+                now_ts(),
+            )
+            .expect("save legacy ordered route strategy");
+        drop(storage);
+
+        let _env = override_env_vars(&[("CODEXMANAGER_ROUTE_STRATEGY", None)]);
+        codexmanager_service::sync_runtime_settings_from_storage();
+
+        let snapshot =
+            codexmanager_service::app_settings_get().expect("get app settings after sync");
+        assert_eq!(
+            snapshot
+                .get("routeStrategy")
+                .and_then(|value| value.as_str()),
+            Some("balanced")
+        );
+
+        let storage = Storage::open(db_path).expect("reopen storage");
+        assert_eq!(
+            storage
+                .get_app_setting(codexmanager_service::APP_SETTING_GATEWAY_ROUTE_STRATEGY_KEY)
+                .expect("read migrated route strategy"),
+            Some("balanced".to_string())
+        );
+    });
+}
+
+#[test]
+fn app_settings_set_maps_ordered_route_strategy_to_balanced() {
+    with_temp_db(|db_path| {
+        let snapshot = codexmanager_service::app_settings_set(Some(&json!({
+            "routeStrategy": "ordered"
+        })))
+        .expect("set ordered route strategy");
+
+        assert_eq!(
+            snapshot
+                .get("routeStrategy")
+                .and_then(|value| value.as_str()),
+            Some("balanced")
+        );
+
+        let storage = Storage::open(db_path).expect("reopen storage");
+        assert_eq!(
+            storage
+                .get_app_setting(codexmanager_service::APP_SETTING_GATEWAY_ROUTE_STRATEGY_KEY)
+                .expect("read stored route strategy"),
+            Some("balanced".to_string())
+        );
+    });
+}
+
+#[test]
 fn sync_runtime_settings_from_storage_preserves_explicit_usage_workers_env() {
     with_temp_db(|db_path| {
         let storage = Storage::open(db_path).expect("open storage");

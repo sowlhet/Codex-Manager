@@ -125,7 +125,12 @@ impl QuotaGuardInput {
 /// # 返回
 /// 返回函数执行结果
 pub fn set_gateway_route_strategy(strategy: &str) -> Result<String, String> {
-    let applied = gateway::set_route_strategy(strategy)?.to_string();
+    let requested = if strategy.trim().eq_ignore_ascii_case("ordered") {
+        "balanced"
+    } else {
+        strategy
+    };
+    let applied = gateway::set_route_strategy(requested)?.to_string();
     save_persisted_app_setting(APP_SETTING_GATEWAY_ROUTE_STRATEGY_KEY, Some(&applied))?;
     Ok(applied)
 }
